@@ -34,8 +34,9 @@ repo sync -j$(nproc)
 wait for about 40mins (mine is 2m/s)
 
 ## 2.since you've got clang12.0.5 and build scripts and mkbootimage, you can choose to compile from either google's source code or MOC-Kernel's source code
-`if you'd like to compile from MOC-Kernel's source code, you can  continue reading this section, if not, you can skip to section 3`
-clone MOC-Kernel's source code and rename it to "build"
+`if you'd like to compile from MOC-Kernel's source code, you can  continue reading this section, if not, you can skip to section 3`  
+
+clone MOC-Kernel's source code and rename it to "common"
 ```
 git clone https://github.com/moculll/MOC-Kernel.git
 mv common common_bak && mv MOC-Kernel common
@@ -47,7 +48,7 @@ curl -O https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023
 unzip gki-certified-boot-android12-5.10-2023-04_r1.zip
 python3 tools/mkbootimg/unpack_bootimg.py --boot_img boot-5.10.img --out default_boot_unpack
 ```
-then you can get boot_signature、kernel、ramdisk in the default_boot_unpack folder
+then you can get boot_signature、kernel、ramdisk in the default_boot_unpack folder  
 `tips: if you have magisk, and you're using gki kernel too, you can replace ramdisk by your boot's unpacked one, then magisk can stay as before since you've flashed the boot image`
 
 ## 4.build kernel by scripts you got from google
