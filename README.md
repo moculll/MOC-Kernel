@@ -1,150 +1,95 @@
-# How do I submit patches to Android Common Kernels
-
-1. BEST: Make all of your changes to upstream Linux. If appropriate, backport to the stable releases.
-   These patches will be merged automatically in the corresponding common kernels. If the patch is already
-   in upstream Linux, post a backport of the patch that conforms to the patch requirements below.
-   - Do not send patches upstream that contain only symbol exports. To be considered for upstream Linux,
-additions of `EXPORT_SYMBOL_GPL()` require an in-tree modular driver that uses the symbol -- so include
-the new driver or changes to an existing driver in the same patchset as the export.
-   - When sending patches upstream, the commit message must contain a clear case for why the patch
-is needed and beneficial to the community. Enabling out-of-tree drivers or functionality is not
-not a persuasive case.
-
-2. LESS GOOD: Develop your patches out-of-tree (from an upstream Linux point-of-view). Unless these are
-   fixing an Android-specific bug, these are very unlikely to be accepted unless they have been
-   coordinated with kernel-team@android.com. If you want to proceed, post a patch that conforms to the
-   patch requirements below.
-
-# Common Kernel patch requirements
-
-- All patches must conform to the Linux kernel coding standards and pass `script/checkpatch.pl`
-- Patches shall not break gki_defconfig or allmodconfig builds for arm, arm64, x86, x86_64 architectures
-(see  https://source.android.com/setup/build/building-kernels)
-- If the patch is not merged from an upstream branch, the subject must be tagged with the type of patch:
-`UPSTREAM:`, `BACKPORT:`, `FROMGIT:`, `FROMLIST:`, or `ANDROID:`.
-- All patches must have a `Change-Id:` tag (see https://gerrit-review.googlesource.com/Documentation/user-changeid.html)
-- If an Android bug has been assigned, there must be a `Bug:` tag.
-- All patches must have a `Signed-off-by:` tag by the author and the submitter
-
-Additional requirements are listed below based on patch type
-
-## Requirements for backports from mainline Linux: `UPSTREAM:`, `BACKPORT:`
-
-- If the patch is a cherry-pick from Linux mainline with no changes at all
-    - tag the patch subject with `UPSTREAM:`.
-    - add upstream commit information with a `(cherry picked from commit ...)` line
-    - Example:
-        - if the upstream commit message is
+# How to Compile MOC-Kernel ?
+`based on Ubuntu-22.04`
+## 1.init repo to download android-common-kernel source code & tools
+init repo
 ```
-        important patch from upstream
-
-        This is the detailed description of the important patch
-
-        Signed-off-by: Fred Jones <fred.jones@foo.org>
+mkdir android-kernel && cd android-kernel
+repo init -u https://android.googlesource.com/kernel/manifest
+vim .repo/mainfests/manifest_9937098.xml
 ```
->- then Joe Smith would upload the patch for the common kernel as
+edit manifest_9937098.xml as below
 ```
-        UPSTREAM: important patch from upstream
+<manifest>
+<remote name="aosp" fetch="https://android.googlesource.com/" review="https://android.googlesource.com/"/>
+<default upstream="master-kernel-build-2021" dest-branch="master-kernel-build-2021" remote="aosp" sync-j="4"/>
+<superproject name="kernel/superproject" remote="aosp" revision="common-android12-5.10-2023-04"/>
+<project path="build" name="kernel/build" revision="aa9e9a42c7b058c1d339c7a03f97683b21eb9e35"/>
+<project path="hikey-modules" name="kernel/hikey-modules" revision="6f0a2a72f849d8bb8e708587582c20019ef91a3c" upstream="android12-5.10" dest-branch="android12-5.10"/>
+<project path="common" name="kernel/common" revision="61344663df420c35b7d70ac37c28880ffea72f51" upstream="android12-5.10-2023-04" dest-branch="android12-5.10-2023-04"/>
+<project path="kernel/tests" name="kernel/tests" revision="c2ea6143e8f1efb9a68cca88159210e16cde1bac"/>
+<project path="kernel/configs" name="kernel/configs" revision="c10b7ea022edc356d37c092d7ca46bcb860f8a90"/>
+<project path="common-modules/virtual-device" name="kernel/common-modules/virtual-device" revision="c6a28520439360ffc10ab1d5f39f94b168f9010d" upstream="android12-5.10" dest-branch="android12-5.10"/>
+<project path="prebuilts-master/clang/host/linux-x86" name="platform/prebuilts/clang/host/linux-x86" clone-depth="1" revision="6e3223f76384455acde43affde3df0ea9df66c0d"/>
+<project path="prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8" name="platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8" clone-depth="1" revision="4e6f66acf138d40d9a80be24b275abb9c6eed729"/>
+<project path="prebuilts/build-tools" name="platform/prebuilts/build-tools" clone-depth="1" revision="cfedc16ec3deb680fca6fe2aff44a1837a97b50d"/>
+<project path="prebuilts/kernel-build-tools" name="kernel/prebuilts/build-tools" clone-depth="1" revision="ca5b087f88c0302ff66f59a6f26be663e92baf15"/>
+<project path="tools/mkbootimg" name="platform/system/tools/mkbootimg" revision="34bc8bfb493401f7aadbd3b434f9fbfa521e9301"/>
+</manifest>
+```
+sync repo
+```
+repo init -m manifest_9937098.xml
+repo sync -j$(nproc)
+```
+wait for about 40mins (mine is 2m/s)
 
-        This is the detailed description of the important patch
-
-        Signed-off-by: Fred Jones <fred.jones@foo.org>
-
-        Bug: 135791357
-        Change-Id: I4caaaa566ea080fa148c5e768bb1a0b6f7201c01
-        (cherry picked from commit c31e73121f4c1ec41143423ac6ce3ce6dafdcec1)
-        Signed-off-by: Joe Smith <joe.smith@foo.org>
+## 2.since you've got clang12.0.5 and build scripts and mkbootimage, you can choose to compile from either google's source code or MOC-Kernel's source code
+`if you'd like to compile from MOC-Kernel's source code, you can  continue reading this section, if not, you can skip to section 3`
+clone MOC-Kernel's source code and rename it to "build"
+```
+git clone https://github.com/moculll/MOC-Kernel.git
+mv common common_bak && mv MOC-Kernel common
 ```
 
-- If the patch requires any changes from the upstream version, tag the patch with `BACKPORT:`
-instead of `UPSTREAM:`.
-    - use the same tags as `UPSTREAM:`
-    - add comments about the changes under the `(cherry picked from commit ...)` line
-    - Example:
+## 3.download released boot.img from google to get ramdisk
 ```
-        BACKPORT: important patch from upstream
+curl -O https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023-04_r1.zip
+unzip gki-certified-boot-android12-5.10-2023-04_r1.zip
+python3 tools/mkbootimg/unpack_bootimg.py --boot_img boot-5.10.img --out default_boot_unpack
+```
+then you can get boot_signature、kernel、ramdisk in the default_boot_unpack folder
+`tips: if you have magisk, and you're using gki kernel too, you can replace ramdisk by your boot's unpacked one, then magisk can stay as before since you've flashed the boot image`
 
-        This is the detailed description of the important patch
+## 4.build kernel by scripts you got from google
 
-        Signed-off-by: Fred Jones <fred.jones@foo.org>
+for the first time you compile the kernel, you need to run this
 
-        Bug: 135791357
-        Change-Id: I4caaaa566ea080fa148c5e768bb1a0b6f7201c01
-        (cherry picked from commit c31e73121f4c1ec41143423ac6ce3ce6dafdcec1)
-        [joe: Resolved minor conflict in drivers/foo/bar.c ]
-        Signed-off-by: Joe Smith <joe.smith@foo.org>
+```
+LTO=thin BUILD_BOOT_IMG=1 SKIP_VENDOR_BOOT=1 BOOT_IMAGE_HEADER_VERSION=4 KERNEL_BINARY=Image GKI_RAMDISK_PREBUILT_BINARY=default_boot_unpack/ramdisk BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
 ```
 
-## Requirements for other backports: `FROMGIT:`, `FROMLIST:`,
+for the second time, in order to save time, you can run ccache clang and disable mrproper
 
-- If the patch has been merged into an upstream maintainer tree, but has not yet
-been merged into Linux mainline
-    - tag the patch subject with `FROMGIT:`
-    - add info on where the patch came from as `(cherry picked from commit <sha1> <repo> <branch>)`. This
-must be a stable maintainer branch (not rebased, so don't use `linux-next` for example).
-    - if changes were required, use `BACKPORT: FROMGIT:`
-    - Example:
-        - if the commit message in the maintainer tree is
 ```
-        important patch from upstream
-
-        This is the detailed description of the important patch
-
-        Signed-off-by: Fred Jones <fred.jones@foo.org>
-```
->- then Joe Smith would upload the patch for the common kernel as
-```
-        FROMGIT: important patch from upstream
-
-        This is the detailed description of the important patch
-
-        Signed-off-by: Fred Jones <fred.jones@foo.org>
-
-        Bug: 135791357
-        (cherry picked from commit 878a2fd9de10b03d11d2f622250285c7e63deace
-         https://git.kernel.org/pub/scm/linux/kernel/git/foo/bar.git test-branch)
-        Change-Id: I4caaaa566ea080fa148c5e768bb1a0b6f7201c01
-        Signed-off-by: Joe Smith <joe.smith@foo.org>
+LTO=thin BUILD_BOOT_IMG=1 SKIP_VENDOR_BOOT=1 BOOT_IMAGE_HEADER_VERSION=4 KERNEL_BINARY=Image GKI_RAMDISK_PREBUILT_BINARY=default_boot_unpack/ramdisk CC="ccache clang" SKIP_MRPROPER=1 BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
 ```
 
-
-- If the patch has been submitted to LKML, but not accepted into any maintainer tree
-    - tag the patch subject with `FROMLIST:`
-    - add a `Link:` tag with a link to the submittal on lore.kernel.org
-    - add a `Bug:` tag with the Android bug (required for patches not accepted into
-a maintainer tree)
-    - if changes were required, use `BACKPORT: FROMLIST:`
-    - Example:
+## 5.flash boot.img into your device
+since a few devices use a/b partition, you need to use fastboot/adb tool to get which partition you're using
+##### fastboot tool
 ```
-        FROMLIST: important patch from upstream
+fastboot getvar all
+```
+output: (bootloader) current-slot: a(or b)
 
-        This is the detailed description of the important patch
+##### adb tool
+```
+adb shell /bin/getprop ro.boot.slot_suffix
+```
+output: _a(or _b)
 
-        Signed-off-by: Fred Jones <fred.jones@foo.org>
-
-        Bug: 135791357
-        Link: https://lore.kernel.org/lkml/20190619171517.GA17557@someone.com/
-        Change-Id: I4caaaa566ea080fa148c5e768bb1a0b6f7201c01
-        Signed-off-by: Joe Smith <joe.smith@foo.org>
+#### now you've known which slot you're using, you can flash boot.img as blow
+```
+fastboot set_active a
 ```
 
-## Requirements for Android-specific patches: `ANDROID:`
-
-- If the patch is fixing a bug to Android-specific code
-    - tag the patch subject with `ANDROID:`
-    - add a `Fixes:` tag that cites the patch with the bug
-    - Example:
+`you can boot from ram rather than flash in case for kernel can't work`
 ```
-        ANDROID: fix android-specific bug in foobar.c
-
-        This is the detailed description of the important fix
-
-        Fixes: 1234abcd2468 ("foobar: add cool feature")
-        Change-Id: I4caaaa566ea080fa148c5e768bb1a0b6f7201c01
-        Signed-off-by: Joe Smith <joe.smith@foo.org>
+fastboot boot boot.img
+```
+`if it works, that means you can flash it into your boot partition right away`
+```
+fastboot flash boot boot.img
 ```
 
-- If the patch is a new feature
-    - tag the patch subject with `ANDROID:`
-    - add a `Bug:` tag with the Android bug (required for android-specific features)
-
+### Enjoy your GKI kernel !
