@@ -1,13 +1,14 @@
 # How to Compile MOC-Kernel ?
 `based on Ubuntu-22.04`
-## 1.init repo to download android-common-kernel source code & tools
+## 1.init repo to download android-common-kernel tools
 init repo
 ```
+sudo apt-get install repo
 mkdir android-kernel && cd android-kernel
 repo init -u https://android.googlesource.com/kernel/manifest
-vim .repo/mainfests/manifest_9937098.xml
+vim .repo/mainfests/manifest_tools.xml
 ```
-edit manifest_9937098.xml as below
+edit manifest_tools.xml as below
 ```
 <manifest>
 <remote name="aosp" fetch="https://android.googlesource.com/" review="https://android.googlesource.com/"/>
@@ -15,7 +16,6 @@ edit manifest_9937098.xml as below
 <superproject name="kernel/superproject" remote="aosp" revision="common-android12-5.10-2023-04"/>
 <project path="build" name="kernel/build" revision="aa9e9a42c7b058c1d339c7a03f97683b21eb9e35"/>
 <project path="hikey-modules" name="kernel/hikey-modules" revision="6f0a2a72f849d8bb8e708587582c20019ef91a3c" upstream="android12-5.10" dest-branch="android12-5.10"/>
-<project path="common" name="kernel/common" revision="61344663df420c35b7d70ac37c28880ffea72f51" upstream="android12-5.10-2023-04" dest-branch="android12-5.10-2023-04"/>
 <project path="kernel/tests" name="kernel/tests" revision="c2ea6143e8f1efb9a68cca88159210e16cde1bac"/>
 <project path="kernel/configs" name="kernel/configs" revision="c10b7ea022edc356d37c092d7ca46bcb860f8a90"/>
 <project path="common-modules/virtual-device" name="kernel/common-modules/virtual-device" revision="c6a28520439360ffc10ab1d5f39f94b168f9010d" upstream="android12-5.10" dest-branch="android12-5.10"/>
@@ -28,18 +28,17 @@ edit manifest_9937098.xml as below
 ```
 sync repo
 ```
-repo init -m manifest_9937098.xml
+repo init -m manifest_tools.xml
 repo sync -j$(nproc)
 ```
-wait for about 40mins (mine is 2m/s)
+wait for about 5mins
 
 ## 2.since you've got clang12.0.5 and build scripts and mkbootimage, you can choose to compile from either google's source code or MOC-Kernel's source code
-`if you'd like to compile from MOC-Kernel's source code, you can  continue reading this section, if not, you can skip to section 3`  
 
 clone MOC-Kernel's source code and rename it to "common"
 ```
 git clone https://github.com/moculll/MOC-Kernel.git
-mv common common_bak && mv MOC-Kernel common
+mv MOC-Kernel common
 ```
 
 ## 3.download released boot.img from google to get ramdisk
@@ -49,7 +48,7 @@ unzip gki-certified-boot-android12-5.10-2023-04_r1.zip
 python3 tools/mkbootimg/unpack_bootimg.py --boot_img boot-5.10.img --out default_boot_unpack
 ```
 then you can get boot_signature、kernel、ramdisk in the default_boot_unpack folder  
-`tips: if you have magisk, and you're using gki kernel too, you can replace ramdisk by your boot's unpacked one, then magisk can stay as before since you've flashed the boot image`
+`tips: if you have magisk/kernelsu, and you want to keep them, you can replace ramdisk by your boot's unpacked one, then magisk/kernelsu can stay as before since you've flashed the boot image`
 
 ## 4.build kernel by scripts you got from google
 
